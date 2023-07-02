@@ -1,4 +1,4 @@
-const { ethers, getNamedAccounts, network } = require("hardhat");
+const { ethers, network } = require("hardhat");
 const { networkConfig } = require("../helper-hardhat-config");
 
 const getWeth = async (account, ethValue) => {
