@@ -16,7 +16,7 @@ const getWeth = async (account, ethValue) => {
     });
     await txResponse.wait();
     const wethBalance = await iWeth.balanceOf(account);
-    console.log(`Got ${wethBalance.toString()} WETH`);
+    console.log(`Got ${ethers.utils.formatEther(wethBalance.toString())} WETH`);
 };
 
 module.exports = { getWeth };
