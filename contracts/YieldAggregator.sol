@@ -16,6 +16,7 @@ import "@aave/periphery-v3/contracts/rewards/interfaces/IRewardsController.sol";
 import {Comet} from "./interfaces/IComet.sol";
 import {CometRewards} from "./interfaces/IComet.sol";
 import {CometStructs} from "./interfaces/IComet.sol";
+// import {IWETHAToken} from "./interfaces/IWETHAToken.sol";
 // import "@uniswap/lib/contracts/libraries/FixedPoint.sol";
 import "hardhat/console.sol";
 
@@ -43,6 +44,7 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
     // using FixedPoint for *;
 
     address public immutable WETH_ADDRESS;
+    // IWETHAToken public immutable aWETH_A_TOKEN;
     address public immutable compAddress;
     address public immutable compRewardAddress;
     Comet public immutable COMPOUND;
@@ -128,10 +130,22 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
 
     /// @dev returns Aave APY
     function getAaveCurrentWETHAPY() public view returns (uint256) {
+        uint256 _userDepositAmount = (10 ** 27); //getAaveWETHCurrentBalance();
         DataTypes.ReserveData memory reserveData = aaveLendingPool.getReserveData(WETH_ADDRESS);
         uint256 currentLiquidityRate = reserveData.currentLiquidityRate;
         console.log("currentLiquidityRate", currentLiquidityRate);
-        return currentLiquidityRate;
+        uint256 currentLiquidityIndex = reserveData.liquidityIndex;
+        console.log("currentLiquidityIndex", currentLiquidityIndex);
+        uint256 _depositAPR = (currentLiquidityRate * (10 ** 18)) / RAY;
+        console.log("_depositAPR", _depositAPR);
+        //uint256 blocksPerYear = 1; //2102400;
+
+        uint256 apyNumerator = (currentLiquidityIndex * _depositAPR) / _userDepositAmount;
+        uint256 apyDenominator = (10 ** 18); // * blocksPerYear;
+        uint256 apy = (apyNumerator * 10 ** 27) / apyDenominator;
+        console.log("apy", apy);
+
+        // return currentLiquidityRate;
         //FixedPoint.uq112x112 memory _depositAPR = FixedPoint.fraction(currentLiquidityRate, RAY);
         // uint256 _depositAPR = currentLiquidityRate / RAY;
         // console.log("_depositAPR", _depositAPR);
@@ -139,6 +153,16 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
         // FixedPoint.uq112x112 memory depositAPY = FixedPoint.uq112x112(uint224((UNITY.add(uint224(FixedPoint.fraction(_depositAPR, SECONDS_PER_YEAR)))) ** SECONDS_PER_YEAR) - UNITY);
         // console.log("depositAPY", depositAPY);
         //return depositAPY;
+        //  (uint256 currentLiquidityRate, , , , , , , , , , , ) = aaveLendingPool.getReserveData(address(wethAToken));
+
+        // uint256 supplyRatePerBlock = aWETH_A_TOKEN.getSupplyRatePerBlock();
+        // console.log("supplyRatePerBlock", supplyRatePerBlock);
+        // uint256 blocksPerYear = 2102400; // Assuming 15 seconds per block
+
+        // // Calculate the annual percentage yield (APY)
+        // uint256 apy = (supplyRatePerBlock * blocksPerYear * 100) / currentLiquidityRate;
+        // console.log("apy", apy);
+        return apy;
     }
 
     /*
@@ -165,9 +189,12 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
 
     /// @dev returns current contract balance in Aave
     function getAaveWETHCurrentBalance() public view returns (uint256) {
-        (uint256 totalCollateralBase, , , , , ) = aaveLendingPool.getUserAccountData(address(this));
-        console.log("totalCollateralBase", totalCollateralBase * (10 * 27));
-        return totalCollateralBase;
+        //(uint256 totalCollateralBase, , , , , ) = aaveLendingPool.getUserAccountData(address(this));
+        // console.log("totalCollateralBase", totalCollateralBase * (10 * 27));
+        // return totalCollateralBase;
+        (uint256 currentATokenBalance, , , , , , , , ) = aaveDataProvider.getUserReserveData(WETH_ADDRESS, address(this));
+        console.log("currentATokenBalance", currentATokenBalance /*** (10 * 27)*/);
+        return currentATokenBalance;
     }
 
     /// @dev contract can receive ether
@@ -206,9 +233,9 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
     function _withdrawWETHFromAave() internal {
         uint256 _collateralAmount = getAaveWETHCurrentBalance();
         uint256 _rewardsAmount = getAaveUnclaimedRewards();
-        if (_rewardsAmount > 0) {
-            claimAaveRewards();
-        }
+        // if (_rewardsAmount > 0) {
+        //     claimAaveRewards();
+        // }
         if (_collateralAmount > 0) {
             try aaveLendingPool.withdraw(WETH_ADDRESS, _collateralAmount, address(this)) {
                 emit FundsWithdrawnFromAave(_collateralAmount.add(_rewardsAmount), block.timestamp);

@@ -6,18 +6,6 @@ const {
 } = require("../helper-hardhat-config")
 
 const { getWeth } = require("../utils/getWeth");
-// const pricePerUnit = ethers.utils.parseEther("10")
-// const quantity = 10
-// const allowedItemsArray = [
-//     "orange",
-//     "bread",
-//     "mango",
-//     "bannana",
-//     "beans",
-//     "rice",
-//     "32in-bone-straight-wig",
-// ]
-// const invalidItem = "blue"
 
 describe("Yield Aggregator Unit Tests", async function () {
     let yieldAggregator, yieldAggregatorConnected, amountEth, amountWei, deployer, iWeth, iWethConnected
@@ -41,8 +29,6 @@ describe("Yield Aggregator Unit Tests", async function () {
         amountEth = 7
         amountWei = ethers.utils.parseEther(amountEth.toString())
         await getWeth(deployer, amountEth)
-        // marketplaceSeller = await marketplace.connect(userSell)
-        // marketplaceBuyer = await marketplace.connect(userBuy)
         const trx1 = await iWeth.approve(yieldAggregator.address, amountWei, { from: deployer })
         await trx1.wait()
     })
@@ -83,11 +69,14 @@ describe("Yield Aggregator Unit Tests", async function () {
             assert.equal(((compBal) + (aaveBal)), Number(amountWei))
 
         })
-        // it("emits FundsDepositedToAave", async () => {
-        //     await expect(yieldAggregator.depositWETH(amountWei, { from: deployer })).to.emit(yieldAggregator, "FundsDepositedToAave")
-        // })
-        it("emits FundsDepositedToCompound", async () => {
-            await expect(yieldAggregator.depositWETH(amountWei, { from: deployer })).to.emit(yieldAggregator, "FundsDepositedToCompound")
+        it("emits FundsDepositedToAave / FundsDepositedToCompound", async () => {
+            const aaveApy = Number(await yieldAggregator.getAaveCurrentWETHAPY())
+            const compApy = Number(await yieldAggregator.getCompoundCurrentWETHAPY())
+            if (aaveApy >= compApy) {
+                await expect(yieldAggregator.depositWETH(amountWei, { from: deployer })).to.emit(yieldAggregator, "FundsDepositedToAave")
+            } else {
+                await expect(yieldAggregator.depositWETH(amountWei, { from: deployer })).to.emit(yieldAggregator, "FundsDepositedToCompound")
+            }
         })
 
     })

@@ -7,6 +7,7 @@ const networkConfig = {
         WETH_Comp_Price_Feed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
         aaveProtocolDataProvider: "0x7B4EB56E7CD4b454BA8ff71E4518426369a138a3",
         aavePoolAddressesProvider: "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+        WETHAToken: "0x4d5F47FA6A74757f35C14fD3a6Ef8E3C9BC514E8",
     },
     31337: {
         name: "hardhat",
@@ -16,6 +17,7 @@ const networkConfig = {
         WETH_Comp_Price_Feed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
         aaveProtocolDataProvider: "0x7B4EB56E7CD4b454BA8ff71E4518426369a138a3",
         aavePoolAddressesProvider: "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+        WETHAToken: "0x4d5F47FA6A74757f35C14fD3a6Ef8E3C9BC514E8",
     },
 
     1: {
@@ -26,6 +28,7 @@ const networkConfig = {
         WETH_Comp_Price_Feed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
         aaveProtocolDataProvider: "0x7B4EB56E7CD4b454BA8ff71E4518426369a138a3",
         aavePoolAddressesProvider: "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+        WETHAToken: "0x4d5F47FA6A74757f35C14fD3a6Ef8E3C9BC514E8",
     },
 
     //   4: {
