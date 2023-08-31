@@ -16,9 +16,7 @@ import "@aave/periphery-v3/contracts/rewards/interfaces/IRewardsController.sol";
 import {Comet} from "./interfaces/IComet.sol";
 import {CometRewards} from "./interfaces/IComet.sol";
 import {CometStructs} from "./interfaces/IComet.sol";
-// import {IWETHAToken} from "./interfaces/IWETHAToken.sol";
-// import "@uniswap/lib/contracts/libraries/FixedPoint.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 error ApproveRightAmount();
 error InsufficientBalance();
@@ -29,6 +27,7 @@ error DepositToCompoundFailed();
 error CompoundWithdawalFailed();
 error ClaimRewardsFromCompoundFailed();
 error ClaimAaveRewardsFailed();
+error NoRebalanceRequired();
 
 /** @title A yield aggregator contract for optimising users APY in Aave and
  * COMPOUND.
@@ -67,11 +66,13 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
     uint256 public compBalance;
 
     //Events
-    event FundsWithdrawn(address _owner, uint256 _amount, uint256 _time);
-    event FundsDepositedToAave(uint256 _amount, uint256 _time);
-    event FundsWithdrawnFromAave(uint256 _amount, uint256 _time);
-    event FundsDepositedToCompound(uint256 _amount, uint256 _time);
-    event FundsWithdrawnFromCompound(uint256 _amount, uint256 _time);
+    event FundsWithdrawn(address _owner, uint256 _amount);
+    event FundsDepositedToAave(uint256 _amount);
+    event FundsWithdrawnFromAave(uint256 _amount);
+    event FundsDepositedToCompound(uint256 _amount);
+    event FundsWithdrawnFromCompound(uint256 _amount);
+    event FundsMovedFromAaveToCompound(uint256 _amount);
+    event FundsMovedFromCompoundToAave(uint256 _amount);
 
     constructor(address _wethAddress, address _cometAddress, address _cometRewardAddress, address _wethCompPriceFeed, address _aaveProtocolDataProvider, address _aavePoolAddressesProvider) {
         // initialise the contract
@@ -87,8 +88,8 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
         BASE_INDEX_SCALE = COMPOUND.baseIndexScale();
     }
 
-    /// @notice Contribute fund on behalf of another address for the open campaign.
-    /// @dev only accepts ERC-20 deposit when campaign is open
+    /// @notice Allow the owner to deposit to Aave and Compound
+    /// @dev only accepts WETH token
     /// @param _amount in wei to be deposited
     function depositWETH(uint256 _amount) external nonReentrant onlyOwner {
         _recieveWETH(msg.sender, _amount);
@@ -100,18 +101,17 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
         }
     }
 
-    /// @notice Funds are released to the authorised business wallet based on the
-    /// milestone schedule.
-    /// @dev Only the authorised business wallet can withdraw
+    /// @notice Allows the owner to withraw his asset from Aave or Compound
     function withdrawWETH() external nonReentrant onlyOwner {
         _withdrawWETHFromAave();
         _withdrawWETHFromCompound();
         uint256 _contractBalance = IERC20(WETH_ADDRESS).balanceOf(address(this));
         if (_contractBalance <= 0) revert InsufficientBalance();
         _sendWETH(owner(), _contractBalance);
-        emit FundsWithdrawn(owner(), _contractBalance, block.timestamp);
+        emit FundsWithdrawn(owner(), _contractBalance);
     }
 
+    /// @notice Allows the caller to move the asset the protocol with higher apy
     function rebalanceWETH() external {
         uint256 _wethBalanceAave = getAaveWETHCurrentBalance();
         updateCompoundWETHCurrentBalance();
@@ -121,55 +121,37 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
             _withdrawWETHFromCompound();
             uint256 _contractBalance = IERC20(WETH_ADDRESS).balanceOf(address(this));
             _depositWETHToAave(_contractBalance);
+            emit FundsMovedFromCompoundToAave(_contractBalance);
         } else if (getAaveCurrentWETHAPY() < getCompoundCurrentWETHAPY() && _wethBalanceCompound < _wethBalanceAave) {
             _withdrawWETHFromAave();
             uint256 _contractBalance = IERC20(WETH_ADDRESS).balanceOf(address(this));
             _depositWETHToCompound(_contractBalance);
+            emit FundsMovedFromAaveToCompound(_contractBalance);
+        } else {
+            revert NoRebalanceRequired();
         }
     }
 
-    /// @dev returns Aave APY
+    /// @dev Returns Aave APY
     function getAaveCurrentWETHAPY() public view returns (uint256) {
-        uint256 _userDepositAmount = (10 ** 27); //getAaveWETHCurrentBalance();
+        uint256 _userDepositAmount = (10 ** 27); // hypothetical
         DataTypes.ReserveData memory reserveData = aaveLendingPool.getReserveData(WETH_ADDRESS);
         uint256 currentLiquidityRate = reserveData.currentLiquidityRate;
-        console.log("currentLiquidityRate", currentLiquidityRate);
+        //console.log("currentLiquidityRate", currentLiquidityRate);
         uint256 currentLiquidityIndex = reserveData.liquidityIndex;
-        console.log("currentLiquidityIndex", currentLiquidityIndex);
+        //console.log("currentLiquidityIndex", currentLiquidityIndex);
         uint256 _depositAPR = (currentLiquidityRate * (10 ** 18)) / RAY;
-        console.log("_depositAPR", _depositAPR);
+        //console.log("_depositAPR", _depositAPR);
         //uint256 blocksPerYear = 1; //2102400;
 
         uint256 apyNumerator = (currentLiquidityIndex * _depositAPR) / _userDepositAmount;
         uint256 apyDenominator = (10 ** 18); // * blocksPerYear;
         uint256 apy = (apyNumerator * 10 ** 27) / apyDenominator;
-        console.log("apy", apy);
-
-        // return currentLiquidityRate;
-        //FixedPoint.uq112x112 memory _depositAPR = FixedPoint.fraction(currentLiquidityRate, RAY);
-        // uint256 _depositAPR = currentLiquidityRate / RAY;
-        // console.log("_depositAPR", _depositAPR);
-
-        // FixedPoint.uq112x112 memory depositAPY = FixedPoint.uq112x112(uint224((UNITY.add(uint224(FixedPoint.fraction(_depositAPR, SECONDS_PER_YEAR)))) ** SECONDS_PER_YEAR) - UNITY);
-        // console.log("depositAPY", depositAPY);
-        //return depositAPY;
-        //  (uint256 currentLiquidityRate, , , , , , , , , , , ) = aaveLendingPool.getReserveData(address(wethAToken));
-
-        // uint256 supplyRatePerBlock = aWETH_A_TOKEN.getSupplyRatePerBlock();
-        // console.log("supplyRatePerBlock", supplyRatePerBlock);
-        // uint256 blocksPerYear = 2102400; // Assuming 15 seconds per block
-
-        // // Calculate the annual percentage yield (APY)
-        // uint256 apy = (supplyRatePerBlock * blocksPerYear * 100) / currentLiquidityRate;
-        // console.log("apy", apy);
+        //console.log("apy", apy);
         return apy;
     }
 
-    /*
-     * Get the current reward for supplying APR in Compound III
-     * @param rewardTokenPriceFeed The address of the reward token (e.g. COMP) price feed
-     * @return The reward APR in USD as a decimal scaled up by 1e18
-     */
+    /// @dev Returns Compound APY
     function getCompoundCurrentWETHAPY() public view returns (uint256) {
         uint rewardTokenPriceInUsd = getCompoundPrice(wethCompPriceFeed);
         uint usdcPriceInUsd = getCompoundPrice(COMPOUND.baseTokenPriceFeed());
@@ -183,23 +165,19 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
     /// @dev returns current contract balance in Compound
     function updateCompoundWETHCurrentBalance() public {
         compBalance = COMPOUND.userCollateral(address(this), WETH_ADDRESS).balance + getCompUnclaimedRewards();
-        console.log("compoundBalance", compBalance);
-        //return _userBalance;
+        // console.log("compoundBalance", compBalance);
     }
 
-    /// @dev returns current contract balance in Aave
+    /// @dev Returns current contract balance in Aave
     function getAaveWETHCurrentBalance() public view returns (uint256) {
-        //(uint256 totalCollateralBase, , , , , ) = aaveLendingPool.getUserAccountData(address(this));
-        // console.log("totalCollateralBase", totalCollateralBase * (10 * 27));
-        // return totalCollateralBase;
         (uint256 currentATokenBalance, , , , , , , , ) = aaveDataProvider.getUserReserveData(WETH_ADDRESS, address(this));
-        console.log("currentATokenBalance", currentATokenBalance /*** (10 * 27)*/);
+        // console.log("currentATokenBalance", currentATokenBalance /*** (10 * 27)*/);
         return currentATokenBalance;
     }
 
-    /// @dev contract can receive ether
+    /// @dev contract cannot receive ether
     receive() external payable {
-        // revert();
+        revert();
     }
 
     /// @notice Transfer Weth from a sender to the contract
@@ -224,7 +202,7 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
     function _depositWETHToAave(uint256 _amount) internal {
         IERC20(WETH_ADDRESS).approve(address(aaveLendingPool), _amount);
         try aaveLendingPool.deposit(WETH_ADDRESS, _amount, address(this), 0) {
-            emit FundsDepositedToAave(_amount, block.timestamp);
+            emit FundsDepositedToAave(_amount);
         } catch {
             revert DepositToAaveFailed();
         }
@@ -238,7 +216,7 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
         // }
         if (_collateralAmount > 0) {
             try aaveLendingPool.withdraw(WETH_ADDRESS, _collateralAmount, address(this)) {
-                emit FundsWithdrawnFromAave(_collateralAmount.add(_rewardsAmount), block.timestamp);
+                emit FundsWithdrawnFromAave(_collateralAmount.add(_rewardsAmount));
             } catch {
                 revert AaveWithdrawalFailed();
             }
@@ -248,7 +226,7 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
     function _depositWETHToCompound(uint256 _amount) internal {
         IERC20(WETH_ADDRESS).approve(address(COMPOUND), _amount);
         try COMPOUND.supply(WETH_ADDRESS, _amount) {
-            emit FundsDepositedToCompound(_amount, block.timestamp);
+            emit FundsDepositedToCompound(_amount);
         } catch {
             revert DepositToCompoundFailed();
         }
@@ -263,7 +241,7 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
         }
         if (_collateralAmount > 0) {
             try COMPOUND.withdraw(WETH_ADDRESS, _collateralAmount) {
-                emit FundsWithdrawnFromCompound(_collateralAmount.add(_rewardsAmount), block.timestamp);
+                emit FundsWithdrawnFromCompound(_collateralAmount.add(_rewardsAmount));
             } catch {
                 revert CompoundWithdawalFailed();
             }
