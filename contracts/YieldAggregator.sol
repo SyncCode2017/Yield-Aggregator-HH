@@ -5,7 +5,6 @@ pragma solidity 0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {DataTypes} from "@aave/core-v3/contracts/protocol/libraries/types/DataTypes.sol";
@@ -16,7 +15,7 @@ import "@aave/periphery-v3/contracts/rewards/interfaces/IRewardsController.sol";
 import {Comet} from "./interfaces/IComet.sol";
 import {CometRewards} from "./interfaces/IComet.sol";
 import {CometStructs} from "./interfaces/IComet.sol";
-// import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 error ApproveRightAmount();
 error InsufficientBalance();
@@ -36,26 +35,22 @@ error NoRebalanceRequired();
  */
 
 contract YieldAggregator is ReentrancyGuard, Ownable {
-    // defensive as not required after pragma ^0.8
-    using SafeMath for uint256;
     using ERC165Checker for address;
     using SafeERC20 for IERC20;
-    // using FixedPoint for *;
 
     address public immutable WETH_ADDRESS;
-    // IWETHAToken public immutable aWETH_A_TOKEN;
     address public immutable compAddress;
     address public immutable compRewardAddress;
     Comet public immutable COMPOUND;
     address public wethCompPriceFeed;
-    uint public constant DAYS_PER_YEAR = 365;
-    uint public constant SECONDS_PER_DAY = 60 * 60 * 24;
-    uint public constant RAY = 10 ** 27;
+    uint256 public constant DAYS_PER_YEAR = 365;
+    uint256 public constant SECONDS_PER_DAY = 60 * 60 * 24;
+    uint256 public constant RAY = 10 ** 27;
     uint224 public constant UNITY = 1;
-    uint public constant SECONDS_PER_YEAR = SECONDS_PER_DAY * DAYS_PER_YEAR;
-    uint public BASE_MANTISSA;
-    uint public BASE_INDEX_SCALE;
-    uint public constant MAX_UINT = type(uint).max;
+    uint256 public constant SECONDS_PER_YEAR = SECONDS_PER_DAY * DAYS_PER_YEAR;
+    uint256 public BASE_MANTISSA;
+    uint256 public BASE_INDEX_SCALE;
+    uint256 public constant MAX_UINT = type(uint256).max;
     IRewardsController public aaveRewardsContract;
 
     IPoolAddressesProvider public immutable LENDING_POOL_ADDRESSES_PROVIDER;
@@ -116,7 +111,6 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
         uint256 _wethBalanceAave = getAaveWETHCurrentBalance();
         updateCompoundWETHCurrentBalance();
         uint256 _wethBalanceCompound = compBalance;
-
         if (getAaveCurrentWETHAPY() > getCompoundCurrentWETHAPY() && _wethBalanceCompound > _wethBalanceAave) {
             _withdrawWETHFromCompound();
             uint256 _contractBalance = IERC20(WETH_ADDRESS).balanceOf(address(this));
@@ -132,47 +126,25 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
         }
     }
 
-    /// @dev Returns Aave APY
-    function getAaveCurrentWETHAPY() public view returns (uint256) {
-        uint256 _userDepositAmount = (10 ** 27); // hypothetical
-        DataTypes.ReserveData memory reserveData = aaveLendingPool.getReserveData(WETH_ADDRESS);
-        uint256 currentLiquidityRate = reserveData.currentLiquidityRate;
-        //console.log("currentLiquidityRate", currentLiquidityRate);
-        uint256 currentLiquidityIndex = reserveData.liquidityIndex;
-        //console.log("currentLiquidityIndex", currentLiquidityIndex);
-        uint256 _depositAPR = (currentLiquidityRate * (10 ** 18)) / RAY;
-        //console.log("_depositAPR", _depositAPR);
-        //uint256 blocksPerYear = 1; //2102400;
+    // /// @notice Claims the reward tokens due to this contract address
+    // function claimAaveRewards() public {
+    //     address[] memory _wethAddress;
+    //     _wethAddress[0] = WETH_ADDRESS;
+    //     try aaveRewardsContract.claimAllRewardsToSelf(_wethAddress) {} catch {
+    //         revert ClaimAaveRewardsFailed();
+    //     }
+    // }
 
-        uint256 apyNumerator = (currentLiquidityIndex * _depositAPR) / _userDepositAmount;
-        uint256 apyDenominator = (10 ** 18); // * blocksPerYear;
-        uint256 apy = (apyNumerator * 10 ** 27) / apyDenominator;
-        //console.log("apy", apy);
-        return apy;
+    /// @notice Claims the reward tokens due to this contract address
+    function claimCompRewards() public {
+        try CometRewards(compRewardAddress).claim(compAddress, address(this), true) {} catch {
+            revert ClaimRewardsFromCompoundFailed();
+        }
     }
 
-    /// @dev Returns Compound APY
-    function getCompoundCurrentWETHAPY() public view returns (uint256) {
-        uint rewardTokenPriceInUsd = getCompoundPrice(wethCompPriceFeed);
-        uint usdcPriceInUsd = getCompoundPrice(COMPOUND.baseTokenPriceFeed());
-        uint usdcTotalSupply = COMPOUND.totalSupply();
-        uint baseTrackingSupplySpeed = COMPOUND.baseTrackingSupplySpeed();
-        uint rewardToSuppliersPerDay = baseTrackingSupplySpeed * SECONDS_PER_DAY * (BASE_INDEX_SCALE / BASE_MANTISSA);
-        uint supplyBaseRewardApr = ((rewardTokenPriceInUsd * rewardToSuppliersPerDay) / (usdcTotalSupply * usdcPriceInUsd)) * DAYS_PER_YEAR;
-        return supplyBaseRewardApr * (10 ** 8);
-    }
-
-    /// @dev returns current contract balance in Compound
+    /// @dev Returns current contract balance in Compound
     function updateCompoundWETHCurrentBalance() public {
         compBalance = COMPOUND.userCollateral(address(this), WETH_ADDRESS).balance + getCompUnclaimedRewards();
-        // console.log("compoundBalance", compBalance);
-    }
-
-    /// @dev Returns current contract balance in Aave
-    function getAaveWETHCurrentBalance() public view returns (uint256) {
-        (uint256 currentATokenBalance, , , , , , , , ) = aaveDataProvider.getUserReserveData(WETH_ADDRESS, address(this));
-        // console.log("currentATokenBalance", currentATokenBalance /*** (10 * 27)*/);
-        return currentATokenBalance;
     }
 
     /// @dev contract cannot receive ether
@@ -210,13 +182,15 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
 
     function _withdrawWETHFromAave() internal {
         uint256 _collateralAmount = getAaveWETHCurrentBalance();
-        uint256 _rewardsAmount = getAaveUnclaimedRewards();
+        // console.log("_collateralAmount", _collateralAmount);
+        // uint256 _rewardsAmount = getAaveUnclaimedRewards();
+        // console.log("_rewardsAmount", _rewardsAmount);
         // if (_rewardsAmount > 0) {
-        //     claimAaveRewards();
+        // claimAaveRewards();
         // }
         if (_collateralAmount > 0) {
             try aaveLendingPool.withdraw(WETH_ADDRESS, _collateralAmount, address(this)) {
-                emit FundsWithdrawnFromAave(_collateralAmount.add(_rewardsAmount));
+                emit FundsWithdrawnFromAave(_collateralAmount);
             } catch {
                 revert AaveWithdrawalFailed();
             }
@@ -235,66 +209,70 @@ contract YieldAggregator is ReentrancyGuard, Ownable {
     function _withdrawWETHFromCompound() internal {
         updateCompoundWETHCurrentBalance();
         uint256 _collateralAmount = compBalance;
-        uint256 _rewardsAmount = getCompUnclaimedRewards();
-        if (_rewardsAmount > 0) {
-            claimCompRewards();
-        }
+        //uint256 _rewardsAmount = getCompUnclaimedRewards() * (10 ** 18);
+        // console.log("_collateralCompAmount", _collateralAmount);
+        //console.log("_rewardsCompAmount", _rewardsAmount);
+        //if (_rewardsAmount > 0) {
+        claimCompRewards();
+        //}
         if (_collateralAmount > 0) {
             try COMPOUND.withdraw(WETH_ADDRESS, _collateralAmount) {
-                emit FundsWithdrawnFromCompound(_collateralAmount.add(_rewardsAmount));
+                emit FundsWithdrawnFromCompound(_collateralAmount); //+ _rewardsAmount);
             } catch {
                 revert CompoundWithdawalFailed();
             }
         }
     }
 
-    /*
-     * Get the current price of an asset from the protocol's persepctive
-     */
-    function getCompoundPrice(address singleAssetPriceFeed) public view returns (uint) {
+    /// @dev Returns Aave APY
+    function getAaveCurrentWETHAPY() public view returns (uint256) {
+        uint256 _userDepositAmount = RAY; // hypothetical
+        DataTypes.ReserveData memory reserveData = aaveLendingPool.getReserveData(WETH_ADDRESS);
+        uint256 currentLiquidityRate = reserveData.currentLiquidityRate;
+        uint256 currentLiquidityIndex = reserveData.liquidityIndex;
+        uint256 _depositAPR = (currentLiquidityRate * (10 ** 18)) / RAY;
+        uint256 apyNumerator = (currentLiquidityIndex * _depositAPR) / _userDepositAmount;
+        uint256 apyDenominator = (10 ** 18);
+        uint256 apy = (apyNumerator * RAY) / apyDenominator;
+        return apy;
+    }
+
+    /// @dev Returns Compound APY
+    function getCompoundCurrentWETHAPY() public view returns (uint256) {
+        uint256 rewardTokenPriceInUsd = getCompoundPrice(wethCompPriceFeed);
+        uint256 usdcPriceInUsd = getCompoundPrice(COMPOUND.baseTokenPriceFeed());
+        uint256 usdcTotalSupply = COMPOUND.totalSupply();
+        uint256 baseTrackingSupplySpeed = COMPOUND.baseTrackingSupplySpeed();
+        uint256 rewardToSuppliersPerDay = baseTrackingSupplySpeed * SECONDS_PER_DAY * (BASE_INDEX_SCALE / BASE_MANTISSA);
+        uint256 supplyBaseRewardApr = ((rewardTokenPriceInUsd * rewardToSuppliersPerDay) / (usdcTotalSupply * usdcPriceInUsd)) * DAYS_PER_YEAR;
+        return supplyBaseRewardApr * (10 ** 8);
+    }
+
+    /// @dev Returns current contract balance in Aave
+    function getAaveWETHCurrentBalance() public view returns (uint256) {
+        (uint256 currentATokenBalance, , , , , , , , ) = aaveDataProvider.getUserReserveData(WETH_ADDRESS, address(this));
+        return currentATokenBalance;
+    }
+
+    /// @notice Get the current price of an asset from the protocol's persepctive
+    function getCompoundPrice(address singleAssetPriceFeed) public view returns (uint256) {
         return COMPOUND.getPrice(singleAssetPriceFeed);
     }
 
-    /*
-     * Get the price feed address for an asset
-     */
-    function getCompPriceFeedAddress(address asset) public view returns (address) {
-        return COMPOUND.getAssetInfoByAddress(asset).priceFeed;
-    }
+    // /// @notice  Get the price feed address for an asset
+    // function getCompPriceFeedAddress(address asset) public view returns (address) {
+    //     return COMPOUND.getAssetInfoByAddress(asset).priceFeed;
+    // }
 
-    /*
-     * Gets the amount of reward tokens due to this contract address
-     */
+    /// @notice Gets the amount of reward tokens due to this contract address
     function getCompUnclaimedRewards() public returns (uint256) {
         return CometRewards(compRewardAddress).getRewardOwed(compAddress, address(this)).owed;
     }
 
-    /*
-     * Claims the reward tokens due to this contract address
-     */
-    function claimAaveRewards() public {
-        address[] memory _wethAddress;
-        _wethAddress[0] = WETH_ADDRESS;
-        // (, uint256[] memory _amounts) = aaveRewardsContract.claimAllRewardsToSelf(_wethAddress);
-        // if (_amounts.length == 0) revert NoAaveRewardsClaimed();
-        try aaveRewardsContract.claimAllRewardsToSelf(_wethAddress) {} catch {
-            revert ClaimAaveRewardsFailed();
-        }
-    }
-
-    /*
-     * Claims the reward tokens due to this contract address
-     */
-    function claimCompRewards() public {
-        try CometRewards(compRewardAddress).claim(compAddress, address(this), true) {} catch {
-            revert ClaimRewardsFromCompoundFailed();
-        }
-    }
-
-    function getAaveUnclaimedRewards() public view returns (uint256) {
-        (, , , , , , uint256 liquidityRate, , ) = aaveDataProvider.getUserReserveData(WETH_ADDRESS, address(this));
-        //try aaveDataProvider.getUserReserveData(WETH_ADDRESS, address(this)) returns (, , , , , , uint256 liquidityRate, , ) {} catch {}
-        uint256 unclaimedRewards = (liquidityRate * getAaveWETHCurrentBalance()) / (10 ** 18);
-        return unclaimedRewards;
-    }
+    // /// @notice  Returns the contract unclaim rewards in Aave
+    // function getAaveUnclaimedRewards() public view returns (uint256) {
+    //     (, , , , , , uint256 liquidityRate, , ) = aaveDataProvider.getUserReserveData(WETH_ADDRESS, address(this));
+    //     uint256 unclaimedRewards = (liquidityRate * getAaveWETHCurrentBalance()) / (10 ** 18);
+    //     return unclaimedRewards;
+    // }
 }

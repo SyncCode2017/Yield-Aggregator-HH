@@ -1,8 +1,4 @@
 
-// require("@nomicfoundation/hardhat-toolbox");
-// require("@nomiclabs/hardhat-etherscan");
-// require("dotenv").config();
-// require("hardhat-deploy");
 require("@nomiclabs/hardhat-waffle")
 require("hardhat-gas-reporter")
 require("@nomiclabs/hardhat-etherscan")
@@ -10,37 +6,37 @@ require("dotenv").config()
 require("solidity-coverage")
 require("hardhat-deploy")
 
-const fs = require("fs");
+const fs = require("fs")
 /** @type import('hardhat/config').HardhatUserConfig */
 
 const PRIVATE_KEY =
   process.env.PRIVATE_KEY ||
-  "0000000000000000000000000000000000000000000000000000000000000000";
+  "0000000000000000000000000000000000000000000000000000000000000000"
 const PRIVATE_KEY_2 =
   process.env.PRIVATE_KEY_Hardhat_0 ||
-  "0000000000000000000000000000000000000000000000000000000000000000";
+  "0000000000000000000000000000000000000000000000000000000000000000"
 const PRIVATE_KEY_3 =
   process.env.PRIVATE_KEY_Hardhat_1 ||
-  "0000000000000000000000000000000000000000000000000000000000000000";
+  "0000000000000000000000000000000000000000000000000000000000000000"
 const POLYGON_MUMBAI_KEY =
   process.env.POLYGONSCAN_API_KEY ||
-  "0000000000000000000000000000000000000000000000000000000000000000";
+  "0000000000000000000000000000000000000000000000000000000000000000"
 
-// require("./tasks");
-require("./tasks/service-tasks");
+// require("./tasks")
+require("./tasks/service-tasks")
 
-let blockNumberToPin;
+let blockNumberToPin
 try {
-  const blockOffset = 20; // Keep above 10 (largest chain re-org was 7 block deeps), while also keeping to a relatively small value to get the 'safest' recent block
+  const blockOffset = 20 // Keep above 10 (largest chain re-org was 7 block deeps), while also keeping to a relatively small value to get the 'safest' recent block
   blockNumberToPin = JSON.parse(
     fs.readFileSync("./utils/config.json").toString()
-  ).blockNumber;
-  blockNumberToPin -= blockOffset; // subtract block number by blockOffset to remove the risk of uncle blocks and increase Alchemy performance
+  ).blockNumber
+  blockNumberToPin -= blockOffset // subtract block number by blockOffset to remove the risk of uncle blocks and increase Alchemy performance
 } catch (err) {
-  console.error(err);
+  console.error(err)
   console.log(
     "There was an error parsing blockNumber from JSON file. Try running `hh updateBlockNumber` separately from your terminal before running hh test"
-  );
+  )
 }
 
 module.exports = {
@@ -129,4 +125,4 @@ module.exports = {
   mocha: {
     timeout: 100000000,
   },
-};
+}

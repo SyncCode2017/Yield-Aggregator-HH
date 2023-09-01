@@ -5,7 +5,8 @@ const {
     networkConfig,
 } = require("../helper-hardhat-config")
 
-const { getWeth } = require("../utils/getWeth");
+const { getWeth } = require("../utils/getWeth")
+const { moveTime } = require("../utils/move-time")
 
 describe("Yield Aggregator Unit Tests", async function () {
     let yieldAggregator, yieldAggregatorConnected, wethAmountEth, wethAmountWei, amountEth, amountWei, deployer, iWeth, iWethConnected
@@ -17,7 +18,7 @@ describe("Yield Aggregator Unit Tests", async function () {
         amountWei = ethers.utils.parseEther(amountEth.toString())
         deployer = (await getNamedAccounts()).deployer
         await deployments.fixture(["all", "aggregator"])
-        const yieldContract = await deployments.get("YieldAggregator");
+        const yieldContract = await deployments.get("YieldAggregator")
         yieldAggregator = await ethers.getContractAt(yieldContract.abi, yieldContract.address)
         iWeth = await ethers.getContractAt(
             "IWETH",
@@ -57,6 +58,7 @@ describe("Yield Aggregator Unit Tests", async function () {
             console.log("Deposited!")
         })
         it("allows withdrawal", async () => {
+            await moveTime(100000)
             const aaveBal = Number(await yieldAggregator.getAaveWETHCurrentBalance())
             const trx3 = await yieldAggregator.updateCompoundWETHCurrentBalance()
             await trx3.wait()
@@ -69,11 +71,14 @@ describe("Yield Aggregator Unit Tests", async function () {
             const trx4 = await yieldAggregator.updateCompoundWETHCurrentBalance()
             await trx4.wait()
             const compBalFinal = Number(await yieldAggregator.compBalance())
+            console.log("compBalFinal", compBalFinal)
             expect(compBal).to.be.greaterThanOrEqual(compBalFinal)
             expect(aaveBal).to.be.greaterThanOrEqual(aaveBalFinal)
             expect(deployerBalFinal).to.be.greaterThan(deployerBal)
+            console.log("deployerBalFinal", deployerBalFinal)
         })
         it("emits FundsWithdrawn", async () => {
+            await moveTime(100000)
             await expect(yieldAggregator.withdrawWETH({ from: deployer })).to.emit(yieldAggregator, "FundsWithdrawn")
         })
     })
@@ -84,6 +89,7 @@ describe("Yield Aggregator Unit Tests", async function () {
             console.log("Deposited!")
         })
         it("Allows rebalancing", async () => {
+            await moveTime(100000)
             const aaveApy = (await yieldAggregator.getAaveCurrentWETHAPY()).toString()
             const compApy = (await yieldAggregator.getCompoundCurrentWETHAPY()).toString()
             const aaveBal = Number(await yieldAggregator.getAaveWETHCurrentBalance())
