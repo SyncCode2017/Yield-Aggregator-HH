@@ -60,29 +60,17 @@ interface Comet {
 
     function getBorrowRate(uint utilization) external view returns (uint);
 
-    function getAssetInfoByAddress(
-        address asset
-    ) external view returns (CometStructs.AssetInfo memory);
+    function getAssetInfoByAddress(address asset) external view returns (CometStructs.AssetInfo memory);
 
-    function getAssetInfo(
-        uint8 i
-    ) external view returns (CometStructs.AssetInfo memory);
+    function getAssetInfo(uint8 i) external view returns (CometStructs.AssetInfo memory);
 
     function getPrice(address priceFeed) external view returns (uint128);
 
-    function userBasic(
-        address
-    ) external view returns (CometStructs.UserBasic memory);
+    function userBasic(address) external view returns (CometStructs.UserBasic memory);
 
-    function totalsBasic()
-        external
-        view
-        returns (CometStructs.TotalsBasic memory);
+    function totalsBasic() external view returns (CometStructs.TotalsBasic memory);
 
-    function userCollateral(
-        address,
-        address
-    ) external view returns (CometStructs.UserCollateral memory);
+    function userCollateral(address, address) external view returns (CometStructs.UserCollateral memory);
 
     function baseTokenPriceFeed() external view returns (address);
 
@@ -100,20 +88,17 @@ interface Comet {
 
     function baseIndexScale() external pure returns (uint64);
 
-    function totalsCollateral(
-        address asset
-    ) external view returns (CometStructs.TotalsCollateral memory);
+    function totalsCollateral(address asset) external view returns (CometStructs.TotalsCollateral memory);
 
     function baseMinForRewards() external view returns (uint256);
 
     function baseToken() external view returns (address);
+
+    //function balanceOf(address account) external view returns (uint256);
 }
 
 interface CometRewards {
-    function getRewardOwed(
-        address comet,
-        address account
-    ) external returns (CometStructs.RewardOwed memory);
+    function getRewardOwed(address comet, address account) external returns (CometStructs.RewardOwed memory);
 
     function claim(address comet, address src, bool shouldAccrue) external;
 }

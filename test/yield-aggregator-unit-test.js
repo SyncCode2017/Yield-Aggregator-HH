@@ -9,7 +9,7 @@ const { getWeth } = require("../utils/getWeth")
 const { moveTime } = require("../utils/move-time")
 
 describe("Yield Aggregator Unit Tests", async function () {
-    let yieldAggregator, yieldAggregatorConnected, wethAmountEth, wethAmountWei, amountEth, amountWei, deployer, iWeth, iWethConnected
+    let yieldAggregator, wethAmountEth, wethAmountWei, amountEth, amountWei, deployer, iWeth
 
     beforeEach(async () => {
         wethAmountEth = 50
@@ -34,9 +34,9 @@ describe("Yield Aggregator Unit Tests", async function () {
             const trx1 = await yieldAggregator.depositWETH(amountWei, { from: deployer })
             await trx1.wait()
             const aaveBal = Number(await yieldAggregator.getAaveWETHCurrentBalance())
-            const trx2 = await yieldAggregator.updateCompoundWETHCurrentBalance()
-            await trx2.wait()
-            const compBal = Number(await yieldAggregator.compBalance())
+            // const trx2 = await yieldAggregator.getCompoundWETHCurrentBalance()
+            // await trx2.wait()
+            const compBal = Number(await yieldAggregator.getCompoundWETHCurrentBalance())
             assert.equal((compBal + aaveBal), Number(amountWei))
 
         })
@@ -60,22 +60,17 @@ describe("Yield Aggregator Unit Tests", async function () {
         it("allows withdrawal", async () => {
             await moveTime(100000)
             const aaveBal = Number(await yieldAggregator.getAaveWETHCurrentBalance())
-            const trx3 = await yieldAggregator.updateCompoundWETHCurrentBalance()
-            await trx3.wait()
-            const compBal = Number(await yieldAggregator.compBalance())
+            const compBal = Number(await yieldAggregator.getCompoundWETHCurrentBalance())
             const deployerBal = Number(await iWeth.balanceOf(deployer))
             const trx2 = await yieldAggregator.withdrawWETH({ from: deployer })
             await trx2.wait()
             const deployerBalFinal = Number(await iWeth.balanceOf(deployer))
             const aaveBalFinal = Number(await yieldAggregator.getAaveWETHCurrentBalance())
-            const trx4 = await yieldAggregator.updateCompoundWETHCurrentBalance()
-            await trx4.wait()
-            const compBalFinal = Number(await yieldAggregator.compBalance())
-            console.log("compBalFinal", compBalFinal)
+            const compBalFinal = Number(await yieldAggregator.getCompoundWETHCurrentBalance())
             expect(compBal).to.be.greaterThanOrEqual(compBalFinal)
             expect(aaveBal).to.be.greaterThanOrEqual(aaveBalFinal)
             expect(deployerBalFinal).to.be.greaterThan(deployerBal)
-            console.log("deployerBalFinal", deployerBalFinal)
+
         })
         it("emits FundsWithdrawn", async () => {
             await moveTime(100000)
@@ -93,9 +88,7 @@ describe("Yield Aggregator Unit Tests", async function () {
             const aaveApy = (await yieldAggregator.getAaveCurrentWETHAPY()).toString()
             const compApy = (await yieldAggregator.getCompoundCurrentWETHAPY()).toString()
             const aaveBal = Number(await yieldAggregator.getAaveWETHCurrentBalance())
-            const trx = await yieldAggregator.updateCompoundWETHCurrentBalance()
-            await trx.wait()
-            const compBal = Number(await yieldAggregator.compBalance())
+            const compBal = Number(await yieldAggregator.getCompoundWETHCurrentBalance())
             if (aaveApy > compApy && compBal > aaveBal) {
                 await expect(yieldAggregator.rebalanceWETH({ from: deployer })).to.emit(yieldAggregator, "FundsMovedFromCompoundToAave")
             } else if (aaveApy < compApy && compBal < aaveBal) {

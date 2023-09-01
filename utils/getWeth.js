@@ -2,7 +2,6 @@ const { ethers, network } = require("hardhat")
 const { networkConfig } = require("../helper-hardhat-config")
 
 const getWeth = async (account, ethValue) => {
-    // const { deployer } = await getNamedAccounts()
     const iWeth = await ethers.getContractAt(
         "IWETH",
         networkConfig[network.config.chainId].WETH

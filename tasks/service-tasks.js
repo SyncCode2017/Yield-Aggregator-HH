@@ -1,4 +1,4 @@
-// const task = require("hardhat/config")
+
 const { updateBlocks } = require("../utils/update-blocks")
 
 task(

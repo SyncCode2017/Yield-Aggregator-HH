@@ -1,8 +1,5 @@
 const fs = require("fs")
-// import dotenv from "dotenv"
-// dotenv.config()
 require("dotenv").config()
-// const { ethers } = require("hardhat")
 
 const updateBlocks = async () => {
     const dataFromFile = fs.readFileSync("./utils/config.json")
