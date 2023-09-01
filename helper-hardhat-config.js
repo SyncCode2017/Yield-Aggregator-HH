@@ -39,9 +39,14 @@ const networkConfig = {
     //   },
 }
 
+const frontEndContractsFile = "./front_end/constants/yieldAggregatorAddress.json"
+
+const frontEndAbiLocation = "./front_end/constants/"
 const developmentChains = ["hardhat", "localhost"]
 
 module.exports = {
     networkConfig,
     developmentChains,
+    frontEndContractsFile,
+    frontEndAbiLocation,
 }

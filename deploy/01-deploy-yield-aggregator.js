@@ -4,11 +4,12 @@ const {
     developmentChains,
 } = require("../helper-hardhat-config")
 const { verify } = require("../utils/helper-functions")
+const { updateFrontEnd } = require("../utils/update-front-end")
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
-    log("deployer", deployer)
+    // log("deployer", deployer)
     const chainId = network.config.chainId
     const wethAddress = networkConfig[chainId].WETH
     const cometAddress = networkConfig[chainId].comet
@@ -42,6 +43,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         process.env.ETHERSCAN_API_KEY
     ) {
         await verify(yieldAggregator.address, argsYield)
+    }
+
+    if (process.env.UPDATE_FRONT_END == "true") {
+        updateFrontEnd()
     }
 }
 
