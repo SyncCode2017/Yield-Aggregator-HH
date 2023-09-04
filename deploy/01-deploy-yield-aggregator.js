@@ -9,12 +9,10 @@ const { updateFrontEnd } = require("../utils/update-front-end")
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
-    // log("deployer", deployer)
     const chainId = network.config.chainId
     const wethAddress = networkConfig[chainId].WETH
     const cometAddress = networkConfig[chainId].comet
     const cometRewards = networkConfig[chainId].comp_rewards
-    const wethCompPriceFeed = networkConfig[chainId].WETH_Comp_Price_Feed
     const aaveProtocolDataProvider =
         networkConfig[chainId].aaveProtocolDataProvider
     const aavePoolAddressesProvider =
@@ -24,7 +22,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         wethAddress,
         cometAddress,
         cometRewards,
-        wethCompPriceFeed,
         aaveProtocolDataProvider,
         aavePoolAddressesProvider,
     ]

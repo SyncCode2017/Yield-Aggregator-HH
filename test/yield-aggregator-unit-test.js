@@ -9,7 +9,7 @@ const { getWeth } = require("../utils/getWeth")
 const { moveTime } = require("../utils/move-time")
 
 describe("Yield Aggregator Unit Tests", async function () {
-    let yieldAggregator, wethAmountEth, wethAmountWei, amountEth, amountWei, deployer, iWeth
+    let yieldAggregator, wethAmountEth, wethAmountWei, amountEth, amountWei, deployer, iWeth, alice, accounts
 
     beforeEach(async () => {
         wethAmountEth = 50
@@ -17,6 +17,8 @@ describe("Yield Aggregator Unit Tests", async function () {
         amountEth = 10
         amountWei = ethers.utils.parseEther(amountEth.toString())
         deployer = (await getNamedAccounts()).deployer
+        accounts = await ethers.getSigners()
+        alice = accounts[1]
         await deployments.fixture(["all", "aggregator"])
         const yieldContract = await deployments.get("YieldAggregator")
         yieldAggregator = await ethers.getContractAt(yieldContract.abi, yieldContract.address)
@@ -30,15 +32,16 @@ describe("Yield Aggregator Unit Tests", async function () {
     })
 
     describe("Deposit Function", function () {
-        it("allows deposit", async () => {
+        it("allows deposit from owner", async () => {
             const trx1 = await yieldAggregator.depositWETH(amountWei, { from: deployer })
             await trx1.wait()
             const aaveBal = Number(await yieldAggregator.getAaveWETHCurrentBalance())
-            // const trx2 = await yieldAggregator.getCompoundWETHCurrentBalance()
-            // await trx2.wait()
             const compBal = Number(await yieldAggregator.getCompoundWETHCurrentBalance())
             assert.equal((compBal + aaveBal), Number(amountWei))
 
+        })
+        it("rejects deposit from a random account", async () => {
+            await expect(yieldAggregator.connect(alice).depositWETH(amountWei)).to.be.revertedWith("Ownable")
         })
         it("emits FundsDepositedToAave / FundsDepositedToCompound", async () => {
             const aaveApy = Number(await yieldAggregator.getAaveCurrentWETHAPY())
@@ -49,7 +52,9 @@ describe("Yield Aggregator Unit Tests", async function () {
                 await expect(yieldAggregator.depositWETH(amountWei, { from: deployer })).to.emit(yieldAggregator, "FundsDepositedToCompound")
             }
         })
-
+        it("does not receive ether", async () => {
+            await expect(alice.sendTransaction({ to: yieldAggregator.address, value: amountWei })).to.be.reverted
+        })
     })
     describe("Withdraw Function", function () {
         beforeEach(async () => {
@@ -72,6 +77,9 @@ describe("Yield Aggregator Unit Tests", async function () {
             expect(deployerBalFinal).to.be.greaterThan(deployerBal)
 
         })
+        it("rejects withdrawal by a random account", async () => {
+            await expect(yieldAggregator.connect(alice).withdrawWETH()).to.be.revertedWith("Ownable")
+        })
         it("emits FundsWithdrawn", async () => {
             await moveTime(100000)
             await expect(yieldAggregator.withdrawWETH({ from: deployer })).to.emit(yieldAggregator, "FundsWithdrawn")
@@ -85,8 +93,8 @@ describe("Yield Aggregator Unit Tests", async function () {
         })
         it("Allows rebalancing", async () => {
             await moveTime(100000)
-            const aaveApy = (await yieldAggregator.getAaveCurrentWETHAPY()).toString()
-            const compApy = (await yieldAggregator.getCompoundCurrentWETHAPY()).toString()
+            const aaveApy = Number(await yieldAggregator.getAaveCurrentWETHAPY())
+            const compApy = Number(await yieldAggregator.getCompoundCurrentWETHAPY())
             const aaveBal = Number(await yieldAggregator.getAaveWETHCurrentBalance())
             const compBal = Number(await yieldAggregator.getCompoundWETHCurrentBalance())
             if (aaveApy > compApy && compBal > aaveBal) {

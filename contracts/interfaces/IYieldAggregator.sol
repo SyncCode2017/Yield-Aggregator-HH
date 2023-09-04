@@ -40,21 +40,15 @@ interface IYieldAggregator {
     /// @notice Allows the caller to move the asset the protocol with higher apy
     function rebalanceWETH() external;
 
-    /// @notice Claims the reward tokens due to this contract address
-    function claimCompRewards() external;
-
-    /// @dev Returns current contract balance in Compound
-    function getCompoundWETHCurrentBalance() external view returns (uint256);
-
     /// @dev Returns Aave APY
     function getAaveCurrentWETHAPY() external view returns (uint256);
 
     /// @dev Returns Compound APY
     function getCompoundCurrentWETHAPY() external view returns (uint256);
 
+    /// @dev Returns current contract balance in Compound
+    function getCompoundWETHCurrentBalance() external view returns (uint256);
+
     /// @dev Returns current contract balance in Aave
     function getAaveWETHCurrentBalance() external view returns (uint256);
-
-    /// @notice Get the current price of an asset from the protocol's persepctive
-    function getCompoundPrice(address singleAssetPriceFeed) external view returns (uint256);
 }

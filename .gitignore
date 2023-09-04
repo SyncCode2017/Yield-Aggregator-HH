@@ -6,6 +6,7 @@ typechain
 typechain-types
 front_end/
 front_end
+
 # Hardhat files
 cache
 artifacts

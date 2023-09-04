@@ -1,5 +1,5 @@
 # IYieldAggregator
-[Git Source](https://github.com/SyncCode2017/yield-aggregator-hh/blob/9547b64ff0dde35cf66a54081393a0499b5c1eda/contracts/interfaces/IYieldAggregator.sol)
+[Git Source](https://github.com/SyncCode2017/yield-aggregator-hh/blob/01148571bb2766461391b15c703f4fd7ab15471a/contracts/interfaces/IYieldAggregator.sol)
 
 
 ## Functions
@@ -38,24 +38,6 @@ Allows the caller to move the asset the protocol with higher apy
 function rebalanceWETH() external;
 ```
 
-### claimCompRewards
-
-Claims the reward tokens due to this contract address
-
-
-```solidity
-function claimCompRewards() external;
-```
-
-### getCompoundWETHCurrentBalance
-
-*Returns current contract balance in Compound*
-
-
-```solidity
-function getCompoundWETHCurrentBalance() external view returns (uint256);
-```
-
 ### getAaveCurrentWETHAPY
 
 *Returns Aave APY*
@@ -74,6 +56,15 @@ function getAaveCurrentWETHAPY() external view returns (uint256);
 function getCompoundCurrentWETHAPY() external view returns (uint256);
 ```
 
+### getCompoundWETHCurrentBalance
+
+*Returns current contract balance in Compound*
+
+
+```solidity
+function getCompoundWETHCurrentBalance() external view returns (uint256);
+```
+
 ### getAaveWETHCurrentBalance
 
 *Returns current contract balance in Aave*
@@ -81,15 +72,6 @@ function getCompoundCurrentWETHAPY() external view returns (uint256);
 
 ```solidity
 function getAaveWETHCurrentBalance() external view returns (uint256);
-```
-
-### getCompoundPrice
-
-Get the current price of an asset from the protocol's persepctive
-
-
-```solidity
-function getCompoundPrice(address singleAssetPriceFeed) external view returns (uint256);
 ```
 
 ## Events

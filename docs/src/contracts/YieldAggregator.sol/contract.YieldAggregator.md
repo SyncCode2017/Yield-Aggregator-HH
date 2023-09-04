@@ -1,5 +1,5 @@
 # YieldAggregator
-[Git Source](https://github.com/SyncCode2017/yield-aggregator-hh/blob/9547b64ff0dde35cf66a54081393a0499b5c1eda/contracts/YieldAggregator.sol)
+[Git Source](https://github.com/SyncCode2017/yield-aggregator-hh/blob/01148571bb2766461391b15c703f4fd7ab15471a/contracts/YieldAggregator.sol)
 
 **Inherits:**
 [IYieldAggregator](/contracts/interfaces/IYieldAggregator.sol/interface.IYieldAggregator.md), ReentrancyGuard, Ownable
@@ -7,19 +7,23 @@
 **Author:**
 Abolaji
 
-*It monitors APY of both Aave and COMPOUND and deposit the user's WETH tokens into the protocol
+*It monitors APY of both Aave and compoundComet and deposit the user's WETH tokens into the protocol
 with higher APY.*
 
 
 ## State Variables
-### WETH_ADDRESS
+### wethAddress
+*WETH contract address*
+
 
 ```solidity
-address public immutable WETH_ADDRESS;
+address public immutable wethAddress;
 ```
 
 
 ### DAYS_PER_YEAR
+*Number of days in a year*
+
 
 ```solidity
 uint48 public constant DAYS_PER_YEAR = 365;
@@ -27,6 +31,8 @@ uint48 public constant DAYS_PER_YEAR = 365;
 
 
 ### SECONDS_PER_DAY
+*Seconds in a day*
+
 
 ```solidity
 uint48 public constant SECONDS_PER_DAY = 60 * 60 * 24;
@@ -34,6 +40,8 @@ uint48 public constant SECONDS_PER_DAY = 60 * 60 * 24;
 
 
 ### compAddress
+*Compound V3 comet contract address*
+
 
 ```solidity
 address public immutable compAddress;
@@ -41,6 +49,8 @@ address public immutable compAddress;
 
 
 ### SECONDS_PER_YEAR
+*Seconds in a year*
+
 
 ```solidity
 uint96 public constant SECONDS_PER_YEAR = SECONDS_PER_DAY * DAYS_PER_YEAR;
@@ -48,23 +58,20 @@ uint96 public constant SECONDS_PER_YEAR = SECONDS_PER_DAY * DAYS_PER_YEAR;
 
 
 ### compRewardAddress
+*Compound rewards contract address*
+
 
 ```solidity
 address public immutable compRewardAddress;
 ```
 
 
-### COMPOUND
+### compoundComet
+*Compound V3 comet contract*
+
 
 ```solidity
-Comet public immutable COMPOUND;
-```
-
-
-### wethCompPriceFeed
-
-```solidity
-address public wethCompPriceFeed;
+Comet public immutable compoundComet;
 ```
 
 
@@ -75,20 +82,6 @@ uint96 public constant RAY = 10 ** 27;
 ```
 
 
-### BASE_MANTISSA
-
-```solidity
-uint256 public BASE_MANTISSA;
-```
-
-
-### BASE_INDEX_SCALE
-
-```solidity
-uint256 public BASE_INDEX_SCALE;
-```
-
-
 ### MAX_UINT
 
 ```solidity
@@ -96,21 +89,18 @@ uint256 public constant MAX_UINT = type(uint256).max;
 ```
 
 
-### aaveRewardsContract
+### lendingPoolAddressProvider
+*Aave V3 lending pool address provider*
+
 
 ```solidity
-IRewardsController public aaveRewardsContract;
-```
-
-
-### LENDING_POOL_ADDRESSES_PROVIDER
-
-```solidity
-IPoolAddressesProvider public immutable LENDING_POOL_ADDRESSES_PROVIDER;
+IPoolAddressesProvider public immutable lendingPoolAddressProvider;
 ```
 
 
 ### aaveDataProvider
+*Aave V3 data provider contract*
+
 
 ```solidity
 IPoolDataProvider public immutable aaveDataProvider;
@@ -118,6 +108,8 @@ IPoolDataProvider public immutable aaveDataProvider;
 
 
 ### aaveLendingPool
+*Aave V3 lending pool contract*
+
 
 ```solidity
 IPool public aaveLendingPool;
@@ -135,7 +127,6 @@ constructor(
     address _wethAddress,
     address _cometAddress,
     address _cometRewardAddress,
-    address _wethCompPriceFeed,
     address _aaveProtocolDataProvider,
     address _aavePoolAddressesProvider
 );
@@ -147,7 +138,6 @@ constructor(
 |`_wethAddress`|`address`|WETH contract address|
 |`_cometAddress`|`address`|Compound Comet contract address|
 |`_cometRewardAddress`|`address`|Compound Comet rewards contract address|
-|`_wethCompPriceFeed`|`address`|Compound WETH price feed address|
 |`_aaveProtocolDataProvider`|`address`|Aave protocol data provider contract address|
 |`_aavePoolAddressesProvider`|`address`|Aave lending pool addresses provider|
 
@@ -187,13 +177,31 @@ Allows the caller to move the asset the protocol with higher apy
 function rebalanceWETH() external;
 ```
 
-### claimCompRewards
+### getAaveCurrentWETHAPY
 
-Claims the reward tokens due to this contract address
+*Returns current Aave APY*
 
 
 ```solidity
-function claimCompRewards() public;
+function getAaveCurrentWETHAPY() public view returns (uint256);
+```
+
+### getCompoundCurrentWETHAPY
+
+*Returns current Compound WETH APY*
+
+
+```solidity
+function getCompoundCurrentWETHAPY() public view returns (uint256);
+```
+
+### getAaveWETHCurrentBalance
+
+*Returns current contract balance in Aave*
+
+
+```solidity
+function getAaveWETHCurrentBalance() public view returns (uint256);
 ```
 
 ### getCompoundWETHCurrentBalance
@@ -248,12 +256,16 @@ function _sendWETH(address _to, uint256 _amount) internal;
 
 ### _depositWETHToAave
 
+*Supplies WETH asset to Aave V3 protocol*
+
 
 ```solidity
 function _depositWETHToAave(uint256 _amount) internal;
 ```
 
 ### _withdrawWETHFromAave
+
+*Withdraws WETH asset from Compound V3 protocol*
 
 
 ```solidity
@@ -262,6 +274,8 @@ function _withdrawWETHFromAave() internal;
 
 ### _depositWETHToCompound
 
+*Supplies WETH asset to Compound V3 protocol*
+
 
 ```solidity
 function _depositWETHToCompound(uint256 _amount) internal;
@@ -269,44 +283,10 @@ function _depositWETHToCompound(uint256 _amount) internal;
 
 ### _withdrawWETHFromCompound
 
+*Withdraws WETH asset from Aave V3 protocol*
+
 
 ```solidity
 function _withdrawWETHFromCompound() internal;
-```
-
-### getAaveCurrentWETHAPY
-
-*Returns Aave APY*
-
-
-```solidity
-function getAaveCurrentWETHAPY() public view returns (uint256);
-```
-
-### getCompoundCurrentWETHAPY
-
-*Returns Compound APY*
-
-
-```solidity
-function getCompoundCurrentWETHAPY() public view returns (uint256);
-```
-
-### getAaveWETHCurrentBalance
-
-*Returns current contract balance in Aave*
-
-
-```solidity
-function getAaveWETHCurrentBalance() public view returns (uint256);
-```
-
-### getCompoundPrice
-
-Get the current price of an asset from the protocol's persepctive
-
-
-```solidity
-function getCompoundPrice(address singleAssetPriceFeed) public view returns (uint256);
 ```
 
