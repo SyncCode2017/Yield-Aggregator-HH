@@ -89,7 +89,7 @@ contract YieldAggregator is IYieldAggregator, ReentrancyGuard, Ownable {
     }
 
     /// @notice Allows the caller to move the asset the protocol with higher apy
-    function rebalanceWETH() external {
+    function rebalanceWETH() external nonReentrant {
         uint256 _wethBalanceAave = getAaveWETHCurrentBalance();
         uint256 _wethBalanceCompound = getCompoundWETHCurrentBalance(); //compBalance;
         if (getAaveCurrentWETHAPY() > getCompoundCurrentWETHAPY() && _wethBalanceCompound > _wethBalanceAave) {
