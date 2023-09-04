@@ -1,5 +1,5 @@
 # YieldAggregator
-[Git Source](https://github.com/SyncCode2017/yield-aggregator-hh/blob/01148571bb2766461391b15c703f4fd7ab15471a/contracts/YieldAggregator.sol)
+[Git Source](https://github.com/SyncCode2017/yield-aggregator-hh/blob/b0c4faacf958598cfd8e723937511d7ce489672f/contracts/YieldAggregator.sol)
 
 **Inherits:**
 [IYieldAggregator](/contracts/interfaces/IYieldAggregator.sol/interface.IYieldAggregator.md), ReentrancyGuard, Ownable
@@ -174,7 +174,7 @@ Allows the caller to move the asset the protocol with higher apy
 
 
 ```solidity
-function rebalanceWETH() external;
+function rebalanceWETH() external nonReentrant;
 ```
 
 ### getAaveCurrentWETHAPY
